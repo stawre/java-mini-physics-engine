@@ -147,7 +147,6 @@ public static Cons formulas =
                                     list("exp", list("/", list("-", "t"),
                                                      list("*", "r", "c"))))))
           );
-
     // Note: this list will handle most, but not all, cases.
     // The binary operators - and / have special cases.
 public static Cons opposites =
@@ -163,77 +162,255 @@ public static void printanswer(String str, Object answer) {
 
 
 public static Cons findpath(Object item, Object cave) {
-  return findpathb(item, cave, null);
-}
-
-public static Cons findpathb(Object item, Object cave, Cons result) {
-  if (consp(first((Cons) cave))) {
-    return append(findpathb(item, first((Cons) cave), append(list("first"), result)),
-    findpathb(item, rest((Cons) cave), append(list("rest"), result)));
-  }
-  else {
-    if (member("done", result) == null && cave == null) {
+  Cons result = null;
+  if (consp(cave)) {
+    if ((result = findpath(item, first((Cons) cave))) != null) {
+      return cons("first", result);
+    }
+    else if ((result = findpath(item, rest((Cons) cave))) != null) {
+      return cons("rest", result);
+    }
+    else {
       return null;
     }
-    else if (member("done", result) != null && cave == null) {
-      return result;
-    }
-    else if (first((Cons) cave).equals(item)) {
-      result = append(result, list("first", "done"));
-      return result;
-    }
-    else if (cave.equals(item)) {
+  }
+
+  else if (cave != null) {
+    if (cave.equals(item)) {
       result = list("done");
       return result;
     }
     else {
-      return findpathb(item, (Object) rest((Cons) cave), append(result, list("rest")));
+      return null;
     }
   }
-}
 
+  else {
+    return null;
+  }
+}
 
 public static Object follow(Cons path, Object cave) {
   if (first(path).equals("first")) {
-    if (consp(first((Cons) path))) {
-      if (follow(rest(path), first((Cons) cave)).equals(null)) {
-        return follow(rest(path), rest((Cons) cave));
-      }
-      else {
-        return follow(rest(path), first((Cons) cave));
-      }
-    }
-    else {
-      return follow(rest(path), cave);
-    }
+    return follow(rest(path), first((Cons) cave));
   }
-  else if (first((Cons) path).equals("rest")) {
-    return follow(rest(path), (Object) rest((Cons) cave));
+  else if (first(path).equals("rest")) {
+    return follow(rest(path), rest((Cons) cave));
+  }
+  else if (first(path).equals("done")) {
+    return cave;
   }
   else {
-    return first((Cons) cave);
+    return null;
   }
 }
-/*
+
 public static Object corresp(Object item, Object tree1, Object tree2) {
+  return follow(findpath(item, tree1), tree2);
 }
 
 public static Cons solve(Cons e, String v) {
+  if (lhs(e).equals(v)) {
+    return e;
+  }
+  else if (rhs(e).equals(v) && rhs(e) != null) {
+    return list(op(e), rhs(e), lhs(e));
+  }
+  else if (!consp(rhs(e))) {
+    return null;
+  }
+  else if (op(e).equals("-") && rhs(e) == null) {
+    return list("-", lhs(e));
+  }
+  else {
+    if (solve(firsttry(e), v) != null) {
+      return solve(firsttry(e), v);
+    }
+    else if (solve(secondtry(e), v) != null){
+      return solve(secondtry(e), v);
+    }
+  }
+  return null;
+}
+
+public static Cons firsttry(Cons e) {
+  if (op((Cons) rhs(e)).equals("-")) {
+    if (rhs((Cons) rhs((e))) == null) {
+      return list(op(e), list(op((Cons) rhs(e)), lhs(e)), lhs((Cons) rhs(e)));
+    }
+    else {
+      return list(op(e), list(op((Cons) rhs(e)), lhs((Cons) rhs(e)), lhs(e)), rhs((Cons) rhs(e)));
+    }
+  }
+  else if (op((Cons) rhs(e)).equals("sqrt")) {
+    return list(op(e), list(second(assoc(op((Cons) rhs(e)), opposites)), lhs(e), 2), lhs((Cons) rhs (e)));
+  }
+  else if (op((Cons) rhs(e)).equals("expt")) {
+    return list(op(e), list(second(assoc(op((Cons) rhs(e)), opposites)), lhs(e)), lhs((Cons) rhs (e)));
+  }
+  else if (op((Cons) rhs(e)).equals("exp")) {
+    return list(op(e), list(second(assoc(op((Cons) rhs(e)), opposites)), lhs(e)), lhs((Cons) rhs(e)));
+  }
+  else if (op((Cons) rhs(e)).equals("log")) {
+    return list(op(e), list(second(assoc(op((Cons) rhs(e)), opposites)), lhs(e)), lhs((Cons) rhs(e)));
+  }
+  else if (op((Cons) rhs(e)).equals("/")) {
+    return list(op(e), list(op((Cons) rhs(e)), lhs((Cons) rhs(e)), lhs(e)), rhs((Cons) rhs(e)));
+  }
+  else {
+    return list(op(e), list(second(assoc(op((Cons) rhs(e)), opposites)), lhs(e), lhs((Cons) rhs(e))), rhs((Cons) rhs(e)));
+  }
+}
+
+public static Cons secondtry(Cons e) {
+  if (rhs((Cons) rhs((e))) == null && op((Cons) rhs(e)).equals("-")) {
+    return list(op(e), list(op((Cons) rhs(e)), lhs(e)), lhs((Cons) rhs(e)));
+  }
+  else {
+    return list(op(e), list(second(assoc(op((Cons) rhs(e)), opposites)), lhs(e), rhs((Cons) rhs(e))), lhs((Cons) rhs(e)));
+  }
 }
 
 public static Double solveit (Cons equations, String var, Cons values) {
+  Cons newValues = values;
+  Cons result = null;
+  while (newValues != null) {
+    result = cons(first((Cons) first(newValues)), result);
+    newValues = rest(newValues);
+  }
+
+  Cons searchVariable = cons(var, result);
+  Cons compareSearch = null;
+  Cons solve = null;
+  Cons solveit = null;
+
+  while (equations != null) {
+    compareSearch = vars((Cons) first(equations));
+
+    if (setEqual(searchVariable, compareSearch)) {
+      solve = (Cons) first(equations);
+      break;
+    }
+    equations = rest(equations);
+  }
+  solveit = solve(solve, var);
+  return eval(rhs(solveit), values);
 }
 
 
     // Include your functions vars and eval from the previous assignment.
     // Modify eval as described in the assignment.
+public static Cons reverse (Cons lst) {
+  Cons answer = null;
+  for (; lst != null; lst = rest(lst)) {
+    answer = cons(first(lst), answer);
+  }
+  return answer;
+}
+
 public static Cons vars (Object expr) {
+  return reverse(varsb(expr, null));
+}
+
+public static Cons varsb (Object expr, Cons result) {
+  if (consp(lhs((Cons) expr))) {
+    result = varsb(lhs((Cons) expr), result);
+  }
+  else if (stringp(lhs((Cons) expr))) {
+    result = cons(lhs((Cons)expr), result);
+  }
+  if (consp(rhs((Cons) expr))) {
+    result = varsb(rhs((Cons) expr), result);
+  }
+  else if (stringp(rhs((Cons) expr))) {
+    result = cons(rhs((Cons) expr), result);
+  }
+  return result;
 }
 
 public static Double eval (Object tree, Cons bindings) {
+  if (consp(tree)) {
+    return evalb(tree, bindings);
+  }
+  else {
+    return (Double) second(assoc(tree, bindings));
+  }
 }
 
-*/
+public static Double evalb (Object tree, Cons bindings) {
+  Double lhs;
+  Double rhs;
+  if (consp(lhs((Cons)tree))) {
+    lhs = evalb(lhs((Cons) tree), bindings);
+  }
+  else {
+    if (numberp(lhs((Cons) tree))) {
+      if (integerp(lhs((Cons) tree))) {
+        lhs = (double) ((Integer) lhs((Cons) tree)).intValue();
+      }
+      else {
+        lhs = (Double) lhs((Cons)tree);
+      }
+    }
+    else if (stringp(lhs((Cons) tree))){
+      lhs = (Double) second(assoc(lhs((Cons) tree), bindings));
+    }
+    else {
+      lhs = null;
+    }
+  }
+  if (consp(rhs((Cons) tree))) {
+    rhs = evalb(rhs((Cons) tree), bindings);
+  }
+  else {
+    if (numberp(rhs((Cons) tree))) {
+      if (integerp(rhs((Cons) tree))) {
+        rhs = (double) ((Integer) rhs((Cons) tree)).intValue();
+      }
+      else {
+        rhs = (Double) rhs((Cons)tree);
+      }
+    }
+    else if (stringp(rhs((Cons) tree))) {
+      rhs = (Double) second(assoc(rhs((Cons) tree), bindings));
+    }
+    else {
+      rhs = null;
+    }
+  }
+
+  if (op((Cons) tree).equals("+")) {
+    return lhs+rhs;
+  }
+  else if (op((Cons) tree).equals("-")) {
+    if (rhs == null) {
+      return lhs = -1*lhs;
+    }
+    else {
+      return lhs-rhs;
+    }
+  }
+  else if (op((Cons) tree).equals("*")) {
+    return lhs*rhs;
+  }
+  else if (op((Cons) tree).equals("expt")) {
+    return Math.pow(lhs, rhs);
+  }
+  else if (op((Cons) tree).equals("/")) {
+    return lhs/rhs;
+  }
+  else if (op((Cons) tree).equals("sqrt")) {
+    return Math.sqrt(lhs);
+  }
+  else if (op((Cons) tree).equals("exp")) {
+    return Math.exp(lhs);
+  }
+  else if (op((Cons) tree).equals("log")) {
+    return Math.log(lhs);
+  }
+  return null;
+}
+
     // ****** your code ends here ******
 
     public static void main( String[] args ) {
@@ -253,7 +430,7 @@ public static Double eval (Object tree, Cons bindings) {
         printanswer("caveb = " , caveb);
         printanswer("pathb = " , pathb);
         printanswer("follow = " , follow(pathb, caveb));
-/*
+
         Cons treea = list(list("my", "eyes"),
                           list("have", "seen", list("the", "light")));
         Cons treeb = list(list("my", "ears"),
@@ -297,7 +474,7 @@ public static Double eval (Object tree, Cons bindings) {
                                             list(list("a", new Double(6.0)),
                                                  list("c", new Double(10.0)))));
 
-*/
+
       }
 
 }
